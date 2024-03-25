@@ -1,4 +1,5 @@
 format: jb-book
 root: index
 chapters:
-- file: tdd
+- file: coroutines
+- file: senders_receivers

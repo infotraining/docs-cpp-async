@@ -1,0 +1,128 @@
+@import url("https://fonts.googleapis.com/css?family=Fira+Sans+Extra+Condensed:300,300i,400,400i,500,500i,600,600i|Fira+Sans:400,400i,500,600,600i,700,700i|Roboto+Condensed:400,400i,700,700i&subset=latin-ext");
+
+/* .bd-main
+{
+  min-width: 1250px;
+} */
+
+html[data-theme="dark"] {
+  --pst-color-inline-code: #abe338;
+  --my-color-definition-background: var(--bs-gray-800);
+  --my-color-definition-border-bottom: var(--bs-gray-700);
+}
+
+html[data-theme="light"] {
+  --pst-color-inline-code: #007020;
+  --my-color-definition-background: var(--bs-gray-100);
+  --my-color-definition-border-bottom: var(--bs-gray-200);
+}
+
+body {
+  font-family: "Fira Sans", "Open Sans", sans-serif;
+}
+
+p {
+  font-size: 1.1em !important;
+}
+
+/* p + ul.simple
+{
+  margin-top: -1rem !important;
+} */
+
+img {
+  margin-top: 2em;
+  margin-bottom: 2em;
+}
+
+main.bd-content #main-content h1,
+main.bd-content #main-content h2,
+main.bd-content #main-content h3,
+main.bd-content #main-content h4,
+main.bd-content #main-content h5 {
+  color: rgb(0, 0, 0);
+  margin-top: 20px;
+}
+
+.bd-content div.cell_input,
+.bd-content div.output {
+  border-radius: 0rem !important;
+}
+
+code.literal {
+  background-color: white !important;
+  border: 0px;
+  padding: 0.1rem 0.25rem;
+}
+
+.header-style,
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  font-family: "Roboto Condensed", "Open Sans", sans-serif;
+  font-weight: 500;
+  padding-bottom: 5px !important;
+  border-bottom: 1px solid #dee2e6;
+}
+
+div.navbar-brand-box a.navbar-brand img.logo {
+  margin-bottom: 25px !important;
+}
+
+.card {
+  border-radius: 0%;
+}
+
+tt,
+code,
+kbd,
+samp,
+pre {
+  font-family: "Cascadia Mono", var(--pst-font-family-monospace) !important;
+  font-size: 95% !important;
+  border-radius: 0px !important;
+}
+
+code.literal {
+  border-radius: 0px !important;
+  background-color: var(--pst-color-surface) 0 !important;
+  padding: 0.1rem 0.25rem;
+}
+
+code {
+  color: var(--pst-color-inline-code) !important;
+  font-size: 95% !important;
+}
+
+.admonition,
+div.admonition {
+  border-radius: 0px !important;
+}
+
+dt {
+  font-weight: 700;
+  font-size: 1.2em !important;
+  background-color: var(--my-color-definition-background);
+  border-bottom-color: var(--my-color-definition-border-bottom);
+  border-bottom-style: solid;
+  border-bottom-width: 1.2;
+}
+
+.h1 h1 {
+  font-size: 2rem !important;
+}
+
+.h2 h2 {
+  font-size: 1.6rem !important;
+}
+
+.h3 h3 {
+  font-size: 1.4rem !important;
+}
+
+.h4 h4 {
+  font-size: 1.2rem !important;
+}

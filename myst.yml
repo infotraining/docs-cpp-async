@@ -37,7 +37,10 @@ project:
   toc:
     - file: index.md                      # the landing page
     - file: content/1_intro.md
-    - file: content/2_cheat_sheet.md
+    - file: content/2_coroutines.md
+    - file: content/3_senders_receivers.md 
+    - file: content/4_iouring.md
+    - file: content/cheat_sheet.md
     
   abbreviations:
     JB2: Jupyter Book 2

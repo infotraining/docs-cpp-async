@@ -8,7 +8,7 @@ site:
 
 <div style="text-align: center">
 
-# Jupyter Book 2 Template
+# Asynchronous Programming in C++
 
 </div>
 
@@ -17,7 +17,7 @@ site:
 :align: center
 ```
 
-_A GitHub Template repository designed for use in Jupyter Book 2 and MyST workshops._
+_A guide to asynchronous programming in C++_
 
 <div style="text-align: center", font-size: 1.2em>
 Krystian Piękoś, Infotraining

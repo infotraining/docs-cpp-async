@@ -372,7 +372,11 @@ auto r = co_await expr;
 ```
 ````
 ````{tab-item} Transformed code
-```cpp
+```{code-block} cpp
+---
+lineno-start: 1
+emphasize-lines: 4,7,12
+---
 auto r = {
   auto&& awaiter = expr;
 
@@ -390,7 +394,7 @@ resume_label_n:
 ````
 `````
 
-The expression following `co_await` is converted into an *awaitable* object.
+The expression following `co_await` must be an *awaitable* (a type that stisfies the `awaitable` concept). The compiler produces an *awaiter* object from the awaitable expression and calls its `await_ready()`, `await_suspend()`, and `await_resume()` methods to manage suspension and resumption.
 
 If a coroutine is suspended at a `co_await` expression and later resumed (via `resume()`), the resume point is directly before the call to `awaiter.await_resume()`.
 
@@ -399,6 +403,8 @@ If a coroutine is suspended at a `co_await` expression and later resumed (via `r
 To be awaited, a type must satisfy the `awaitable` concept:
 
 ```cpp
+// simplified awaitable concept - for demonstration purposes only
+
 template <typename T>
 concept awaitable = requires(T obj) {
   { obj.await_ready(); } -> std::convertible_to<bool>;
@@ -423,7 +429,7 @@ If `await_suspend()`:
   * when `true` execution returns immediately to the caller/resumer of the current coroutine
   * when `false` the current coroutine is resumed
 
-* returns a `coroutine_handle<P>` to another coroutine, that coroutine is resumed (via `handle.resume()`) - this may lead to chained resumption of the current coroutine
+* returns a `coroutine_handle<P>` to another coroutine, that coroutine is resumed (via `handle.resume()`) - this may lead to chained resumption of the current coroutine. It allows you to implement *continuation-passing* style of asynchronous programming, where the current coroutine is resumed by another coroutine that is scheduled to run when the awaited operation completes. See [continuation-passing](https://en.wikipedia.org/wiki/Continuation-passing_style) for more details.
 
 * throws an exception, the exception is caught, the current coroutine is resumed, and the exception is rethrown
 
@@ -502,15 +508,83 @@ co_await p.yield_value(expression);
 
 ## Customization points for a coroutine
 
-The interface of the **promise** object specifies methods for customizing the behavior of the coroutine. The library writer can customize:
+Coroutines in C++20 are highly customizable. The behavior of a coroutine is determined by the *promise* type, which is a user-defined type that the compiler uses to manage the coroutine's state and interactions.
 
+The programmer can customize:
+
+* how to allocate the coroutine frame
 * what happens when the coroutine is called
 * what happens when the coroutine returns (either by normal return or via unhandled exception)
 * behavior of any `co_await` or `co_yield` expression within the coroutine body
 
 ### Allocating a coroutine frame
 
-The compiler needs to allocate memory for a coroutine frame. To achieve this it generates a call to `operator new`.
+The compiler needs to allocate memory for a **coroutine frame**.
+
+#### Default allocation
+
+By default, the compiler uses `operator new` to allocate memory for the coroutine frame on the heap. The frame size depends on:
+
+* the number and size of local variables in the coroutine body
+* parameters which are copied into the frame
+* the size of the *promise* object - which is also stored in the frame
+* compiler-generated state for managing suspension and resumption
+
+#### Heap Allocation eLision Optimization (HALO)
+
+Compilers can sometimes eliminate coroutine frame allocation entirely through HALO (Heap Allocation eLision Optimization).
+
+When the compiler can prove that:
+
+* The coroutine’s lifetime is contained within the caller’s lifetime
+* The frame size is known at compile time
+
+…​it may allocate the frame on the caller’s stack instead of the heap.
+
+
+HALO is most effective when:
+
+* Coroutines are awaited immediately after creation
+* Optimization is enabled (-O2 or higher)
+
+```{code-block} cpp
+// HALO might apply here because the task is awaited immediately
+co_await compute_something();
+
+// HALO cannot apply here because the task escapes
+auto task = compute_something();
+store_for_later(std::move(task));
+```
+
+#### Custom allocators
+
+Promise type can also customize allocation by defining `operator new` and `operator delete`. This allows you to use custom memory pools or other allocation strategies for coroutine frames.
+
+```{code-block} cpp
+struct promise_type
+{
+    // Custom allocation
+    static void* operator new(std::size_t size)
+    {
+        return my_allocator.allocate(size);
+    }
+
+    static void operator delete(void* ptr, std::size_t size)
+    {
+        my_allocator.deallocate(ptr, size);
+    }
+
+    // ... rest of promise type
+};
+```
+
+The promise’s `operator new` receives only the frame size. To access allocator arguments passed to the coroutine, use the leading allocator convention with `std::allocator_arg_t` as the first parameter.
+
+
+### Initial suspend point
+
+When a coroutine is called, the compiler first constructs the *promise* object and then executes the `co_await promise.initial_suspend();` statement.   
+
 This allows the author of the `promise_type` to control whether the coroutine should suspend before executing the coroutine body that appears in the source code or start executing the coroutine body immediately.
 
 If the coroutine suspends at the initial suspend point then it can be later resumed or destroyed at a time of your choosing by calling `resume()` or `destroy()` on the coroutine’s coroutine_handle.
@@ -588,3 +662,119 @@ The final thing you can customize through the promise type is the behavior of th
 If the `co_yield` keyword appears in a coroutine then the compiler translates the expression `co_yield <expr>` into the expression `co_await promise.yield_value(<expr>)`. 
 
 The promise type can therefore customize the behavior of the `co_yield` keyword by defining one or more `yield_value()` methods on the promise object.
+
+## Exception handling
+
+Exceptions in coroutines require special handling because a coroutine can suspend and resume across different call stacks.
+
+### The Exception Flow
+
+When an exception is thrown inside a coroutine and not caught:
+
+* The exception is caught by an implicit `try-catch` surrounding the coroutine body
+
+* `promise.unhandled_exception()` is called while the exception is active
+
+* After `unhandled_exception()` returns, `co_await promise.final_suspend()` executes
+
+* The coroutine completes (suspended or destroyed, depending on `final_suspend`)
+
+### Options for handling exceptions
+
+The `promise.unhandled_exception()` method can be implemented in various ways, depending on the desired behavior:
+
+#### Terminate the program
+
+```cpp
+void unhandled_exception()
+{
+    std::terminate();
+}
+``` 
+
+#### Store the exception for later retrieval
+
+```cpp
+std::exception_ptr exception_;          
+
+void unhandled_exception()
+{
+    exception_ = std::current_exception();
+}
+```
+
+#### Rethrow the exception immediately
+
+```cpp
+void unhandled_exception()
+{
+    throw;  // propagates to whoever resumed the coroutine
+}
+```
+
+#### Swallow the exception
+
+```cpp
+void unhandled_exception()
+{
+    // silently ignored - almost always a mistake
+}
+```
+
+### Initialization Exceptions
+
+Exceptions thrown before the first suspension point (before `initial_suspend` completes) propagate directly to the caller without going through `unhandled_exception()`. 
+
+If `initial_suspend()` returns `suspend_always`, the coroutine suspends before any user code runs, avoiding this edge case.
+
+## Symetric Transfer
+
+When a coroutine completes or awaits another coroutine, control must transfer somewhere. The naive approach by simply calling `coro_handle.resume()` encounters a problem: each nested coroutine adds a frame to the call stack. With deep nesting, stack overflow may occure.
+
+**Symmetric transfer** solves this by returning a coroutine handle from `await_suspend()`. Instead of resuming the target coroutine via a function call, the compiler generates a tail call that transfers control without growing the stack.
+
+### Stack Accumulation
+
+Let's consider a chain of coroutines where each awaits the next:
+
+```{code-block} cpp
+task<> a() { co_await b(); }
+task<> b() { co_await c(); }
+task<> c() { co_return; }
+```
+Without symmetric transfer, when `a` awaits `b`:
+
+1. `a` calls into the awaiter's `await_suspend()`
+2. `await_suspend()` calls `b.coro_handle.resume()`
+3. `b` runs, calls into its awaiter's `await_suspend()`
+4. That calls `c.coro_handle.resume`
+5. The stack now has frames for `a`'s suspension, `b`'s suspension and `c`'s suspension
+
+### The Solution: Symmetric Transfer
+
+`await_suspend()` can return a `coroutine_handle` to the next coroutine to resume. The compiler generates a tail call to that handle, transferring control directly without adding a new stack frame.
+
+```{code-block} cpp
+std::coroutine_handle<> await_suspend(std::coroutine_handle<> current_hndl)
+{
+    continuation_hndl_ = current_hndl; // store continuation for later resumption
+    
+    return next_coroutine_hndl_;  // return handle to resume (instead of calling resume())
+}
+```
+
+When `await_suspend()` returns a handle, the compiler generates code that performs a tail call to that handle, effectively transferring control to the next coroutine without growing the stack. The generated code looks like this:
+
+```{code-block} cpp
+auto next_hndl = awaiter.await_suspend(current_hndl);
+if (next_hndl != std::noop_coroutine())
+{
+    next_hndl.resume(); // tail call - no new stack frame
+}
+```
+
+```{important}
+Returning a handle from `await_suspend()` is a powerful optimization but requires careful design to avoid issues like:
+- Ensuring the returned handle is valid and properly scheduled
+- Avoiding returning a handle that could lead to resuming a destroyed coroutine
+```

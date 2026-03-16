@@ -1,32 +1,80 @@
 # Senders & Receivers
 
-Standard C++ model for asynchrony is based around three key abstractions: 
+Senders and receivers are the core components of `std::execution`, a standardized asynchronous programming framework introduced in the C++26 standard.
 
-* **schedulers**
-* **senders** and **receivers**
-* and a set of customizable **asynchronous algorithms**
+Often compared to how iterators revolutionized synchronous algorithms by separating data from operations, senders and receivers provide a generic "async equivalent" to bridge the gap between asynchronous task graphs and execution resources like thread pools or GPUs
+
+### The Core Concepts
+
+This model for asynchrony is based around four key abstractions: 
+
+* **Scheduler** - handle to an execution context (such as a thread pool, GPU, or I/O loop)
+* **Sender** - object that describe asynchronous computations. Senders are **lazy** - represent work that has not yet started, and they are **composable** - they can be combined together to form larger computations.
+* **Receiver** - asynchronous notification handler or callback. It receives the results of a sender's work once it completes.
+* **Operation State**: When a sender and a receiver are connected, they produce an operation state
+. This object encapsulates the actual work to be done and its internal state. It must remain at a stable memory address (it is non-movable) for the duration of the task.
+
+### The Lifecycle of an Async Operation
+
+An asynchronous operation follows a strict three-step process:
+
+1. **Connect** - a sender is joined with a receiver using the connect() function, yielding an operation state.
+2. **Start** - The work only begins when start() is called on that operation state.
+3. **Complete** - Once the work finishes, the operation state notifies the receiver through one of three completion channels:
+   * `set_value`: Successful completion, potentially passing multiple results
+   * `set_error`: Failure, passing an exception or error code
+   * `set_stopped`: Cooperative cancellation, indicating the work was abandoned without error or success
+
+This structured lifecycle ensures that asynchronous operations are predictable, composable, and can be efficiently managed across various execution contexts.
+
+### Why Use Senders and Receivers?
+
+* **Composability**: Senders can be chained using adapters (like then, let_value, or when_all) to build complex, non-linear task graphs. This allows different libraries (e.g., networking and GPU processing) to interoperate without custom "glue code".
+* **Efficiency**: The model is designed for zero abstraction overhead. Because the structure of the computation is known at compile time, the framework can often avoid dynamic memory allocations and unnecessary synchronization.
+* **Structured Concurrency**: Senders and receivers naturally enforce structured concurrency. By explicitly defining dependencies and ensuring that parent tasks wait for child tasks, the framework eliminates common bugs like data races, deadlocks, and orphaned "fire-and-forget" tasks.
+* **Generic Execution**: You can write an algorithm once and change where it runs (e.g., from a single CPU thread to a massive GPU pool) simply by swapping the scheduler.
 
 ## Schedulers
 
 ### Execution resource
 
-An execution resource is a resource that represents the place where execution will happen. This could be a concrete resource - like a specific thread pool object, or a GPU - or a more abstract one, like the current thread of execution.
+A **scheduler** is a lightweight handle that represents a compute resource or a strategy for scheduling work onto an execution resource. It acts as the bridge between abstract asynchronous code and concrete hardware or system resources like thread pools, GPUs, I/O loops, or system-wide execution contexts.
 
-Execution contexts don’t need to have a representation in code; they are simply a term describing certain properties of execution of a function.
+Schedulers provide a uniform interface for diverse execution environments, including:
+* **Thread Pools**: Managing multiple OS threads for CPU-bound tasks.
+* **Hardware Interrupts**: In embedded systems, schedulers can hook into timer or priority-based interrupts.
+* **Accelerators**: Offloading work to heterogeneous resources like GPUs or clusters.
+* **Inline/Single Thread**: Simpler contexts like the current thread or a dedicated background thread.
 
-### Schedulers
+
+### Scheduler Concept
 
 A scheduler is a lightweight handle that represents a strategy for scheduling work onto an execution resource.
 
-Since execution resources don’t necessarily manifest in C++ code, it’s not possible to program directly against their API. A scheduler is a solution to that problem: the scheduler concept is defined by a single sender algorithm, `schedule`, which returns a sender that will complete on an execution resource determined by the scheduler. Logic that you want to run on that context can be placed in the receiver’s completion-signalling method.
+Since execution resources don’t necessarily manifest in C++ code, it’s not possible to program directly against their API. A scheduler is a solution to that problem: the scheduler concept is defined by a single sender algorithm, `schedule()`. This function does not perform work immediately; instead, it returns a sender. When this sender is eventually started, it completes (sends an "impulse") on an execution agent belonging to the scheduler's associated resource
 
-```c++
+
+```cpp
 stdexec::scheduler auto sch = thread_pool.scheduler();
 stdexec::sender auto snd = stdexec::schedule(sch);
 
 // snd is a sender (see below) describing the creation of a new execution resource
 // on the execution resource associated with sch
 
+```
+
+### Managing Work Migration
+
+Schedulers allow developers to explicitly specify where and when work happens. By using adaptors like `starts_on` and `continues_on`, a program can move a computation from one resource (e.g., an I/O thread) to another (e.g., a GPU thread pool).
+
+```cpp
+stdexec::scheduler auto io_scheduler = ...;
+stdexec::scheduler auto gpu_scheduler = ...;
+
+stdexec::sender auto snd = stdexec::schedule(io_scheduler)
+                         | stdexec::then([]{ /* do some I/O work */ })
+                         | stdexec::continues_on(gpu_scheduler)
+                         | stdexec::then([]{ /* do some GPU work */ });
 ```
 
 ## Senders

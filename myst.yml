@@ -2,7 +2,7 @@
 version: 1
 project:
   id: 7204695b-7485-4989-863c-16cf6e4db155
-  title: Jupyter Book 2 Template
+  title: Asynchronous Programming in C++
   description: This description goes in the preface of the pdf output. 
   # keywords: []
   authors:

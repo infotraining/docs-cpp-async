@@ -219,7 +219,7 @@ The `split` sender adaptor facilitates connecting to a sender multiple times, re
 ```cpp
 auto some_algorithm(execution::sender auto&& input) 
 {
-    execution::sender auto multi_shot = split(input);
+    execution::sender auto multi_shot = execution::split(input);
     // "multi_shot" is guaranteed to be multi-shot,
     // regardless of whether "input" was multi-shot or not
 
@@ -232,9 +232,32 @@ auto some_algorithm(execution::sender auto&& input)
 
 ### Joining senders
 
+During asynchronous computations, it is often necessary to join multiple independent senders together. For example, you might want to wait for the results of multiple independent network requests before proceeding with a computation.
+
 `when_all(input_sndrs...)` is a sender adaptor that returns a sender that completes when the last of the input senders completes. It sends a pack of values, where the elements of said pack are the values sent by the input senders, in order. `when_all` returns a sender that also does not have an associated scheduler.
 
-`transfer_when_all` accepts an additional scheduler argument. It returns a sender whose value completion scheduler is the scheduler provided as an argument, but otherwise behaves the same as `when_all`. You can think of it as a composition of `transfer(when_all(inputs...), scheduler)`, but one that allows for better efficiency through customization.
+```cpp
+static_thread_pool thread_pool{8};
+
+auto to_upper = [](const std::string& text) -> std::string {
+    //...
+};
+
+auto to_lower = [](const std::string& text) -> std::string {
+    //...
+};
+
+scheduler auto sch = thread_pool.get_scheduler();
+
+sender auto common = just("Hello World!"s) | split();
+
+sender auto pipe_1 = starts_on(sch, common) | then(to_upper);
+sender auto pipe_2 = starts_on(sch, common) | then(to_lower);
+
+sender auto results = when_all(pipe_1, pipe_2);
+
+auto [upper, lower] = sync_wait(std::move(results)).value();
+```
 
 ### Support for cancellation
 
@@ -307,9 +330,9 @@ Exmaple
 
 ```cpp
 auto snd = execution::then(
-             execution::transfer(
+             execution::continues_on(
                execution::then(
-                 execution::transfer(
+                 execution::continues_on(
                    execution::then(
                      execution::schedule(thread_pool.scheduler())
                      []{ return 123; }),
@@ -329,9 +352,9 @@ auto [result] = this_thread::sync_wait(snd).value();
 ```cpp
 auto snd0 = execution::schedule(thread_pool.scheduler());
 auto snd1 = execution::then(snd0, []{ return 123; });
-auto snd2 = execution::transfer(snd1, cuda::new_stream_scheduler());
+auto snd2 = execution::continues_on(snd1, cuda::new_stream_scheduler());
 auto snd3 = execution::then(snd2, [](int i){ return 123 * 5; })
-auto snd4 = execution::transfer(snd3, thread_pool.scheduler())
+auto snd4 = execution::continues_on(snd3, thread_pool.scheduler())
 auto snd5 = execution::then(snd4, [](int i){ return i - 5; });
 auto [result] = *this_thread::sync_wait(snd4);
 // result == 610
@@ -345,9 +368,9 @@ auto [result] = *this_thread::sync_wait(snd4);
 ```cpp
 auto snd = execution::schedule(thread_pool.scheduler())
          | execution::then([]{ return 123; })
-         | execution::transfer(cuda::new_stream_scheduler())
+         | execution::continues_on(cuda::new_stream_scheduler())
          | execution::then([](int i){ return 123 * 5; })
-         | execution::transfer(thread_pool.scheduler())
+         | execution::continues_on(thread_pool.scheduler())
          | execution::then([](int i){ return i - 5; });
 auto [result] = this_thread::sync_wait(snd).value();
 // result == 610
@@ -367,7 +390,7 @@ Certain sender adaptors are not pipeable, because using the pipeline syntax can 
 
 Senders represent a single unit of asynchronous work. In many cases though, what is being modelled is a sequence of data arriving asynchronously, and you want computation to happen on demand, when each element arrives. This requires nothing more than what is in this paper and the range support in C++20. A range of senders would allow you to model such input as keystrokes, mouse movements, sensor readings, or network requests.
 
-Given some expression R that is a range of senders, consider the following in a coroutine that returns an async generator type:
+Given some expression `R` that is a range of senders, consider the following in a coroutine that returns an async generator type:
 
 ```cpp
 for (auto snd : R) {

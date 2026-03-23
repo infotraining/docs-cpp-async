@@ -1,5 +1,5 @@
 ---
-title: Jupyter Book 2 Template
+title: Asynchronous Programming in C++ - Structured Concurrency
 site:
   hide_outline: true
   hide_toc: true

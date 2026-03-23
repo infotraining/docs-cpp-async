@@ -1,6 +1,6 @@
 ---
 theme: seriph
-base: /slides/
+base: /docs-cpp-async/slides/
 title: Asynchronous Programming in C++
 class: text-center
 highlighter: shiki

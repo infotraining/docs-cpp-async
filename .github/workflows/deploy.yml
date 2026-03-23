@@ -43,7 +43,10 @@ jobs:
           cache: 'pnpm'
           cache-dependency-path: slides/pnpm-lock.yaml
       - name: Enable corepack
-        run: corepack enable
+        run: |
+          corepack enable
+          corepack prepare pnpm@9.15.5 --activate
+          pnpm --version
       - name: Install Python dependencies
         working-directory: docs
         run: |

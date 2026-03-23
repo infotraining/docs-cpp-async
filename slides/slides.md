@@ -29,7 +29,7 @@ Instructor: Krystian Piękoś Ph.D.
 
 <div class="logo">
 
-![logo](./img/logo.png)
+![logo](/img/logo.png)
 
 </div>
 

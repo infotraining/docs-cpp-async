@@ -1,3 +1,0 @@
-# C++ Book Template
-
-This repository serves as a template for creating a Jupyter Book 2 documentation site, specifically tailored for C++ content. It includes a custom logo, favicon, and styling to provide a cohesive and professional look for your C++ documentation projects. The template is designed to be easily customizable, allowing you to adapt it to your specific needs while maintaining a consistent and polished appearance.

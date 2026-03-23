@@ -1,6 +1,6 @@
 ---
 theme: seriph
-base: /docs-cpp-async/slides/
+base: ./
 title: Asynchronous Programming in C++
 class: text-center
 highlighter: shiki
@@ -18,7 +18,7 @@ fonts:
 defaults:
    layout: default
 layout: cover
-background: /img/bg-blue-1.jpg
+background: ./img/bg-blue-1.jpg
 ---
 
 # Asynchronous Programming in C++
@@ -29,7 +29,7 @@ Instructor: Krystian Piękoś Ph.D.
 
 <div class="logo">
 
-![logo](/img/logo.png)
+![logo](./img/logo.png)
 
 </div>
 

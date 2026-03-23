@@ -1,6 +1,6 @@
 ---
 layout: cover
-background: /img/header-bg.svg
+background: ./img/header-bg.svg
 ---
 
 # Structured Concurrency
@@ -55,7 +55,7 @@ class: white-slide
 
 ##
 
-<img src="/img/StructuredConcurrency.png" class="img-lg" />
+<img src="./img/StructuredConcurrency.png" class="img-lg" />
 
 ---
 

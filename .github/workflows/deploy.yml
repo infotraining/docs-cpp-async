@@ -37,6 +37,13 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+          cache-dependency-path: slides/pnpm-lock.yaml
+      - name: Enable corepack
+        run: corepack enable
       - name: Install Python dependencies
         working-directory: docs
         run: |
@@ -46,6 +53,19 @@ jobs:
       - name: Build HTML
         working-directory: docs
         run: jupyter book build --execute --html
+
+      - name: Install Slidev dependencies
+        working-directory: slides
+        run: pnpm install --frozen-lockfile
+
+      - name: Build Slidev deck
+        working-directory: slides
+        run: pnpm build -- --base /slides/
+
+      - name: Copy slides into site
+        run: |
+          mkdir -p docs/_build/html/slides
+          cp -r slides/dist/* docs/_build/html/slides/
         
       - name: Upload Output HTML as Artifact
         uses: actions/upload-pages-artifact@v3

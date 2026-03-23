@@ -1,0 +1,237 @@
+@import url("https://fonts.googleapis.com/css2?family=Fira+Sans:wght@300;400;600;700&family=Roboto+Condensed:wght@400;700&family=JetBrains+Mono:wght@400;500;600&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Merriweather:wght@300;400;700&display=swap");
+
+/* Custom site styles. Keep this file small and focused. */
+
+body {
+  font-family: "Merriweather", "Roboto Condensed", "Fira Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+
+nav {
+    font-family: "Roboto Condensed", "Fira Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  font-family: "Roboto Condensed", "Fira Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+
+code,
+pre,
+kbd,
+samp {
+  font-family: "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, "Liberation Mono", monospace;
+  font-weight: 500;
+}
+
+.article :where(p):not(:where([class~=not-prose],[class~=not-prose] *)) {
+    margin-top: 1.25em;
+    margin-bottom: 1.25em;
+    font-size: 0.9em;
+}
+
+.article :where(p + ul):not(:where([class~=not-prose],[class~=not-prose] *)) {
+  margin-top: -0.85em !important;
+}
+
+.article :where(ul ul,ul ol,ol ul,ol ol):not(:where([class~=not-prose],[class~=not-prose] *)) {
+    margin-top: .375em !important;
+    margin-bottom: .75em;
+}
+
+.article :where(code):not(:where([class~=not-prose],[class~=not-prose] *)) {
+    color: #E91E63;
+    font-weight: 500;
+    font-size: 0.985em;
+}
+
+/* .article :where(p):not(:where([class~=not-prose],[class~=not-prose] *)) {
+    margin-top: 0em !important;
+    margin-bottom: 0em !important;
+} */
+
+.article :where(li>p,dd>p,header>p,footer>p):not(:where([class~=not-prose],[class~=not-prose] *)) {
+    margin-top: .25rem;
+    margin-bottom: .25rem;
+}
+
+:root {
+  --tw-prose-code: rgb(0, 109, 7 !important); /* pick your color */
+}
+
+.prose {
+  --tw-prose-code: rgb(8, 85, 27);
+}
+
+pre.myst-code-body {
+  background-color: #f0f0f0 !important;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+.shadow-md {
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2) !important;
+}
+
+.shadow {
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2) !important;
+}
+
+.rounded {
+    border-radius: 0 !important;
+}
+
+.rounded-lg {
+    border-radius: 0 !important;
+}
+
+.myst-tab-item-header {
+  font-family: "Roboto Condensed", "Fira Sans", system-ui, -apple-system, "Segoe UI", sans-serif !important;
+}
+
+.myst-admonition-header-text {
+  font-family: "Roboto Condensed", "Fira Sans", system-ui, -apple-system, "Segoe UI", sans-serif !important;
+}
+
+/* .rounded-md {
+    border-radius: 0 !important;
+} */
+
+/*Title color in dark mode*/
+.dark aside.admonition-experiment .dark\:text-white {
+   color: rgb(23 25 25); 
+}
+
+/* Parent */
+aside.admonition-experiment {
+  border-color: rgb(255, 0, 0) !important; /* Important zorgt ervoor dat we over de oude stijl heen schrijven */
+  background-color: rgb(255, 255, 255); /* Change background color text part*/
+} 
+
+/* Title */
+aside.admonition-experiment > div:first-child {
+  background-color: rgb(251, 183, 183);  /* Change header background color */
+}
+
+/* Icon */
+aside.admonition-experiment > div:first-child::before {
+  content: "🧪";
+  /* add padding left so it is not directly on the side*/
+  padding-left: 0.2em;
+  margin-left: 0.5em;
+}
+
+aside.admonition-experiment > div:first-child > div:first-child {
+  background-color: rgb(251, 183, 183); /* changes header color of text part
+  margin-left: 0 !important; /* voorkomt dubbele margin */
+}
+
+/* end of new code */
+
+.admonition-experiment .admonition-title-experiment {
+  background-color: black; /* Change header background color */
+  color: #FFFFFF; /* Change header text color */
+}
+
+/* Custom icon using ::before pseudo-element */
+.admonition-experiment .admonition-title-experiment::before {
+  content: "🧪"; /* Use an emoji or */
+  content: "\f0c3"; /* Use a FontAwesome icon code */
+  font-family: "Font Awesome 5 Free"; /* If using FontAwesome */
+  margin-right: 0.5em;
+}
+
+aside.admonition-experiment img {
+display: block;
+}
+
+
+
+/* ADMONITION INTERMEZZO */
+/* Parent */
+aside.admonition-intermezzo {
+  border-color: rgb(162, 0, 255) !important; 
+  background-color: rgb(255, 255, 255); 
+} 
+
+/* Title */
+aside.admonition-intermezzo > div:first-child {
+  background-color: rgb(218, 154, 255);  
+}
+
+/* Icon */
+aside.admonition-intermezzo > div:first-child::before {
+  content: "📖";
+  /* add padding left so it is not directly on the side*/
+  padding-left: 0.2em;
+  margin-left: 0.5em;
+}
+
+aside.admonition-intermezzo > div:first-child > div:first-child {
+  background-color: rgb(218, 154, 255); /* changes header color of text part
+  margin-left: 0 !important; /* voorkomt dubbele margin */
+}
+
+.admonition-intermezzo .admonition-title-intermezzo {
+  background-color: black; /* Change header background color */
+  color: #FFFFFF; /* Change header text color */
+}
+
+/* Custom icon using ::before pseudo-element */
+.admonition-intermezzo .admonition-title-intermezzo::before {
+  content: "📖"; /* Use an emoji or */
+  content: "f518"; /* Use a FontAwesome icon code */
+  font-family: "Font Awesome 5 Free"; /* If using FontAwesome */
+  margin-right: 0.5em;
+}
+
+aside.admonition-intermezzo img {
+display: block;
+}
+
+
+/* ADMONITION EXAMPLE */
+/* Parent */
+aside.admonition-example {
+  border-color: rgb(12, 35, 64) !important; 
+  background-color: rgb(255, 255, 255); 
+} 
+
+/* Title */
+aside.admonition-example > div:first-child {
+  background-color: rgb(0, 118, 194);  
+}
+
+/* Icon */
+aside.admonition-example > div:first-child::before {
+  content: "🔍";
+  color:rgb(12, 35, 64)
+  /* add padding left so it is not directly on the side*/
+  padding-left: 0.2em;
+  margin-left: 0.5em;
+}
+
+aside.admonition-example > div:first-child > div:first-child {
+  background-color: rgb(0, 118, 194); /* changes header color of text part
+  margin-left: 0 !important; /* voorkomt dubbele margin */
+}
+
+.admonition-example .admonition-title-example {
+  background-color: black; /* Change header background color */
+  color: #FFFFFF; /* Change header text color */
+}
+
+/* Custom icon using ::before pseudo-element */
+.admonition-example .admonition-title-example::before {
+  content: "🔍"; /* Use an emoji or */
+  content: "f002"; /* Use a FontAwesome icon code */
+  font-family: "Font Awesome 5 Free"; /* If using FontAwesome */
+  margin-right: 0.5em;
+}
+
+aside.admonition-example img {
+display: block;
+}

@@ -55,13 +55,15 @@ background: /img/header-bg.svg
 - Schedulers are handles to **execution contexts**, such as threads, thread pools, or I/O services
 - They dictate **where** particular work needs to be executed
 
----
-class: white-slide
----
+--- 
 
-## Senders/Receivers - Scheme
+## Receivers
 
-<img src="/img/Senders-Receivers-1.png" class="img-lg" />
+* Receivers are the counterparts to senders; they are the entities that receive the results of asynchronous computations described by senders
+* A receiver is an object that has three specific functions that can be called by the sender when the asynchronous operation completes:
+  1. `set_value(auto...)` - called when the operation completes successfully, passing the resulting values (or void)
+  2. `set_error(auto err)` - called when the operation encounters an error, passing an error value (like `std::exception_ptr`, `std::error_code`, or any user-defined error type)
+  3. `set_stopped()` - called when the operation is stopped or cancelled before completion
 
 ---
 class: white-slide
@@ -71,6 +73,16 @@ class: white-slide
 
 <img src="/img/Receiver.png" class="img-lg" />
 
+
+---
+
+## Connecting Senders and Receivers
+
+* Senders and receivers are connected using the `execution::connect` algorithm, which takes a sender and a receiver and produces an *operation state*
+* The operation state is an object that represents the work described by the sender
+  * it is responsible for managing the execution of the sender's work and ensuring that the appropriate completion signal is sent to the receiver when the work finishes
+* The operation state is neither movable nor copyable, and it must not be destroyed until the asynchronous operation it represents has completed
+
 ---
 class: white-slide
 ---
@@ -78,6 +90,23 @@ class: white-slide
 ## execution::connect(S, R)
 
 <img src="/img/connect.png" class="img-md" style="padding-top: 3em;" />
+
+
+
+---
+
+## Sender Consumers
+
+* Sender consumers are algorithms that take senders as input and execute the work they describe, typically blocking the calling thread until the sender's work is complete
+* Examples of sender consumers include `sync_wait()` and `sync_wait_with_variant()`, which execute a sender and wait for its completion, returning the result in an appropriate form to the caller
+
+---
+class: white-slide
+---
+
+## Senders/Receivers - Scheme
+
+<img src="/img/Senders-Receivers-1.png" class="img-lg" />
 
 
 ---
@@ -292,9 +321,9 @@ sync_wait(std::move(work));
 
 - The work represented by a sender has one entry point and one exit point, usually called **completion** (or **completion signal**)
 - A sender can complete in one of three ways:
-  1. `set_value(auto...)` - the operation is completed successfully and produces output values (or void)
-  2. `set_error(auto err)` - the operation encountered an error and produces an error value (`std::exception_ptr`, `std::error_code`, or any user-defined error type)
-  3. `set_stopped()` - the operation was stopped or cancelled before completion
+  1. by calling `set_value(auto...)` on the receiver - successfully produces output values (or void)
+  2. by calling `set_error(auto err)` on the receiver - produces an error value (`std::exception_ptr`, `std::error_code`, or any user-defined error type
+  3. by calling `set_stopped()` on the receiver - the operation was stopped or cancelled before completion
 - Sender is a generalization of a function
 
 ---
@@ -332,9 +361,19 @@ sync_wait(std::move(work));
 
 ## Sender adaptors
 
+* They take one or more senders as input and produce a new sender based on the provided senders
+* They allow for the composition of senders, enabling the construction of complex asynchronous workflows from simpler building blocks
+* A sender adaptor can modify the behavior of the input senders, such as changing the execution context, handling errors, or transforming the output values
+
+
+
+---
+
+## Sender adaptors
+
 <div class="text-code-09">
 
-- Given one or more senders, they return senders based on the provided senders:
+- List of sender adaptors defined in the C++26 standard:
   - `starts_on(scheduler auto sch, sender auto snd)`
   - `continues_on(sender auto input, scheduler auto sch)`
   - `on(scheduler auto sch, sender auto snd)`
@@ -347,6 +386,83 @@ sync_wait(std::move(work));
   - `into_variant(sender auto snd)`
   - `stopped_as_optional(sender auto snd)`, `stopped_as_error(sender auto snd, error_type err)`
 
+</div>
+
+---
+layout: two-cols-header
+---
+
+## Sender Sub-Language
+
+* Sender and adaptor pipelines replace C++’s control flow, variable binding, error handling, and iteration with library-level equivalents
+* Example of analogy:
+
+::left::
+
+```cpp
+auto work = just(42)
+    | then([](int v) { return v + 1; })
+    | then([](int v) { return v * 2; }
+);
+
+auto [result] = sync_wait(std::move(work)).value();
+```
+
+::right::
+
+```cpp
+int value = 42;
+value = value + 1;
+value = value * 2;
+``` 
+
+---
+layout: two-cols-header
+---
+
+## Sender Sub-Language
+
+* Another example:
+
+::left::
+
+<div class="text-code-08">
+```cpp
+auto work = just(std::move(socket)) // pure/return
+  | let_value([](tcp_socket& s) {   // monadic bind
+      return async_read(s, buf)     // Kleisli arrow
+          | then([](auto data) {    // fmap/functor lift
+              return parse(data);   // value continuation
+            });
+    })
+  | upon_error([](auto e) {         // error continuation
+      log(e);                       // error channel handler
+    })
+  | upon_stopped([] {               // stopped continuation
+      log("cancelled");             // cancellation handler
+   });
+```
+</div>
+
+::right::
+
+<div class="text-code-08">
+```cpp
+try 
+{
+    auto socket = std::move(socket); 
+    auto data = co_await async_read(socket, buf); 
+    auto result = parse(data);
+}
+catch (const std::exception& e) 
+{
+    log(e);
+} 
+catch (const operation_cancelled& e) 
+{
+    log("cancelled");
+}
+```
 </div>
 
 ---
@@ -369,7 +485,7 @@ sync_wait(std::move(work));
     - throws the received error if the sender completes with set_error()
     - returns an empty optional if the given sender completes with a stopped signal
 
----
+<!-- ---
 
 ## let_* adaptors
 
@@ -380,12 +496,12 @@ sync_wait(std::move(work));
   - it is similar to the `optional<T>::and_then()` function
 
 ```cpp
-auto process_image_sender(const Image& img) -> sender auto {
-    // ...
-}
-
 Image load();
 void save(const Image& img);
+
+sender auto process_image_sender(const Image& img) {
+    // returns a sender that processes the image asynchronously
+}
 
 sender auto workflow =
     just()
@@ -393,4 +509,4 @@ sender auto workflow =
     | let_value([](Image img) { return process_image_sender(img); })
     | then(save);
 ```
-</div>
+</div> -->

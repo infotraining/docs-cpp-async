@@ -71,8 +71,8 @@ jobs:
 
       - name: Build Slidev deck
         working-directory: slides
-        # run: pnpm build --base "${{ env.BASE_URL }}/slides/"
-        run: pnpm build --base /slides/
+        run: pnpm build --base "${{ env.BASE_URL }}/slides/"
+        # run: pnpm build --base /slides/
 
       - name: Copy slides into site
         run: |

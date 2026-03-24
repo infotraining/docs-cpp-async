@@ -100,6 +100,12 @@ A sender is said to send some values if a receiver connected (`execution::connec
  Senders are designed to be **highly composable**, allowing developers to build complex, non-linear task graphs using algorithms `like then`, `let_value`, and `when_all`.
  This composition often resembles an "onion" where each sender adaptor wraps around the previous one
 
+```{image} ./figures/Senders-Receivers-1.png
+:alt: senders-receivers
+:align: center
+:width: 600px
+```
+
 #### Generic Basis
 
 Much like iterators act as the glue between containers and algorithms, senders serve as the generic glue between asynchronous task graphs and execution resources like thread pools, GPUs, or I/O loops.
@@ -386,9 +392,9 @@ Certain sender adaptors are not pipeable, because using the pipeline syntax can 
 
 * `execution::on`: This sender adaptor changes how the sender passed to it is executed, not what happens to its result, but allowing it in a pipeline makes it read as if it performed a function more similar to transfer.
 
-### Range of senders - async sequence of data
+<!-- ### Range of senders - async sequence of data
 
-Senders represent a single unit of asynchronous work. In many cases though, what is being modelled is a sequence of data arriving asynchronously, and you want computation to happen on demand, when each element arrives. This requires nothing more than what is in this paper and the range support in C++20. A range of senders would allow you to model such input as keystrokes, mouse movements, sensor readings, or network requests.
+Senders represent a single unit of asynchronous work. In many cases though, what is being modelled is a sequence of data arriving asynchronously, and you want computation to happen on demand, when each element arrives. A range of senders would allow you to model such input as keystrokes, mouse movements, sensor readings, or network requests.
 
 Given some expression `R` that is a range of senders, consider the following in a coroutine that returns an async generator type:
 
@@ -399,7 +405,8 @@ for (auto snd : R) {
   else
     break;
 }
-```
+``` 
+-->
 
 ### All awaitable are senders
 
@@ -408,11 +415,12 @@ All generally awaitable types automatically model the sender concept. The adapta
 For an example, imagine a coroutine type called `Task<T>` that knows nothing about senders. It doesn’t implement any of the sender customization points. Despite that fact, and despite the fact that the `this_thread::sync_wait` algorithm is constrained with the sender concept, the following would compile and do what the user wants:
 
 ```cpp
-Task<int> doSomeAsyncWork();
+Task<int> do_some_async_work();
 
-int main() {
-  // OK, awaitable types satisfy the requirements for senders:
-  auto o = this_thread::sync_wait(doSomeAsyncWork());
+int main() 
+{
+    // OK, awaitable types satisfy the requirements for senders:
+    auto o = this_thread::sync_wait(do_some_async_work());
 }
 ```
 
@@ -424,14 +432,15 @@ If you choose to implement your sender-based algorithms as coroutines, you’ll 
 
 ```cpp
 template<class S>
-  requires single-sender<S&> // see [exec.as.awaitable]
+    requires single-sender<S&> // see [exec.as.awaitable]
 task<single-sender-value-type<S>> retry(S s) {
-  for (;;) {
-    try {
-      co_return co_await s;
-    } catch(...) {
+    for (;;) {
+        try {
+            co_return co_await s;
+        } 
+        catch(...) {
+        }
     }
-  }
 }
 ```
 
@@ -444,6 +453,12 @@ A receiver is a callback that supports more than one channel. In fact, it suppor
 * `set_error`, which signals that an error has happened during scheduling of the current work, executing the current work, or at some earlier point in the sender chain; and
 
 * `set_stopped`, which signals that the operation completed without succeeding (`set_value`) and without failing (`set_error`). This result is often used to indicate that the operation stopped early, typically because it was asked to do so because the result is no longer needed.
+
+```{image} ./figures/Receiver.png
+:alt: receiver
+:align: center
+:width: 90%
+```
 
 Once an async operation has been started exactly one of these functions must be invoked on a receiver before it is destroyed.
 

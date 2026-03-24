@@ -518,3 +518,95 @@ execution::start(state);
 // operation states are not movable, and therefore this operation state object must be
 // kept alive until the operation finishes
 ```
+
+## Writing sender
+
+Let's try to implement a simplest sender that just sends a single value through the value channel:
+
+```cpp 
+#include <stdexec/execution.hpp>
+
+namespace execution = stdexec;
+
+struct JustIntSender
+{
+    // this is a sender type - required by the sender concept
+    using sender_concept = execution::sender_t;
+
+    // how this sender completes - required by the sender concept
+    using completion_signatures = execution::completion_signatures<execution::set_value_t(int)>;
+
+    // no environment to provide - required by the sender concept
+    execution::env<> get_env() const noexcept { return {}; }
+
+    int value_to_send_;
+
+    JustIntSender(int value)
+        : value_to_send_(value)
+    { }
+
+    template <execution::receiver Receiver>
+    auto connect(Receiver receiver)
+    {
+        return Details::JustIntOpState{.value_to_send_ = value_to_send_, .receiver_ = std::move(receiver)};
+    }
+
+    auto just_int(int value)
+    {
+        return JustIntSender(value);
+    }
+};
+```
+Writing a sender involves defining a type that models the sender concept, which defines a few requirements:
+
+First, we define a inner type `sender_concept` that alliases `execution::sender_t` to indicate that this type models the sender concept. 
+
+Second, we define a inner type `completion_signatures` that specifies the completion signatures of this sender, which in this case is just a single value channel that sends an `int`. Doing this, we indicate that this sender will complete by calling `set_value(int)` on the receiver.
+
+A sender must also provide a `get_env()` function that returns the environment associated with the sender. In this case, we return an empty environment - `execution::env<>{}`.
+
+Finally, we implement the `connect()` function, which takes a receiver and returns an operation state. The operation state is responsible for managing the work that will be performed when the sender is started, and it ensures that one of the completion operations will be called on the receiver when the work is done. In this case, we create a simple operation state that holds the value to send and the receiver, and when started, it will call `set_value(value_to_send_)` on the receiver.
+
+Let's also implement the operation state for this sender:
+
+```cpp
+namespace Details
+{
+    struct Immovable
+    {
+        Immovable() = default;
+        Immovable(const Immovable&) = delete;
+        Immovable& operator=(const Immovable&) = delete;
+    };
+
+    template <execution::receiver Receiver>
+    struct JustIntOpState : Immovable
+    {
+        int value_to_send_;
+        Receiver receiver_;
+
+        // this is an operation state type - required by the operation state concept
+        using operation_state_concept = execution::operation_state_t;
+
+        // the actual work - just send the value to the receiver - required by the operation state concept
+        void start() noexcept
+        {
+            execution::set_value(std::move(receiver_), value_to_send_);
+        }
+    };
+} // namespace Details
+```
+
+The operation state is a simple struct that holds the value to send and the receiver. It models the operation state concept by defining an inner type `operation_state_concept` that alliases `execution::operation_state_t`, and by implementing a `start()` function that performs the actual work of sending the value to the receiver.
+
+The `start()` function is marked `noexcept` because it is not allowed to throw exceptions. If an exception is thrown from `start()`, the behavior is undefined. In this case, since we are just calling `set_value()` on the receiver, which is also not allowed to throw, we can safely mark `start()` as `noexcept`.
+
+The operation state is also made immovable by deleting the copy and move constructors and assignment operators. This is because operation states often contain internal state that must remain at a stable memory address for the duration of the asynchronous operation, and making them immovable ensures that they can safely manage resources and maintain their integrity throughout their lifecycle.
+
+Now we can use our `just_int` to send a value:
+
+```cpp
+auto snd = just_int(42);
+auto result = this_thread::sync_wait(std::move(snd)).value();
+// result == 42
+```

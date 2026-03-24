@@ -1,6 +1,6 @@
 ---
 layout: cover
-background: ./img/header-bg.svg
+background: /img/header-bg.svg
 ---
 
 # Coroutines
@@ -20,7 +20,7 @@ class: white-slide
 
 ## Function vs Coroutine
 
-<img src="./img/coroutines-concept.png" class="img-lg" />
+<img src="/img/coroutines-concept.png" class="img-lg" />
 
 ---
 
@@ -378,7 +378,7 @@ class: white-slide
 
 ## Coroutine - scheme
 
-<img src="./img/Coroutine-1.png" class="img-lg" />
+<img src="/img/Coroutine-1.png" class="img-lg" />
 
 ---
 
@@ -561,7 +561,7 @@ final-suspend: // final suspend point
 
 ---
 layout: cover
-background: ./img/bg-blue-2.jpg
+background: /img/bg-blue-2.jpg
 ---
 
 ## Example 1 - The Simplest Coroutine
@@ -691,7 +691,7 @@ struct [[nodiscard]] TaskResumer {
 
 ---
 layout: cover
-background: ./img/bg-blue-2.jpg
+background: /img/bg-blue-2.jpg
 ---
 
 ## Example 2
@@ -976,7 +976,7 @@ co_await promise.yield_value(expr);
 
 ---
 layout: cover
-background: ./img/bg-blue-2.jpg
+background: /img/bg-blue-2.jpg
 ---
 
 ## Exercise - Implementing a Generator
@@ -987,7 +987,7 @@ class: white-slide
 
 ## Generator - scheme
 
-<img src="./img/Coro-Generator-1.png" class="img-lg" style="max-width: 70%;" />
+<img src="/img/Coro-Generator-1.png" class="img-lg" style="max-width: 70%;" />
 
 ---
 class: white-slide
@@ -995,7 +995,7 @@ class: white-slide
 
 ## Generator - scheme
 
-<img src="./img/Coro-Generator-2.png" class="img-lg" />
+<img src="/img/Coro-Generator-2.png" class="img-lg" />
 
 ---
 
@@ -1203,4 +1203,4 @@ if (next_hndl != std::noop_coroutine())
 {
     next_hndl.resume(); // tail call - no new stack frame
 }
-```  
+```

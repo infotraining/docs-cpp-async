@@ -1,6 +1,5 @@
 ---
 theme: seriph
-base: ./
 title: Asynchronous Programming in C++
 class: text-center
 highlighter: shiki
@@ -18,7 +17,7 @@ fonts:
 defaults:
    layout: default
 layout: cover
-background: ./img/bg-blue-1.jpg
+background: /img/bg-blue-1.jpg
 ---
 
 # Asynchronous Programming in C++
@@ -29,7 +28,7 @@ Instructor: Krystian Piękoś Ph.D.
 
 <div class="logo">
 
-![logo](./img/logo.png)
+![logo](/img/logo.png)
 
 </div>
 
@@ -65,14 +64,15 @@ layout: default
  </v-clicks>
 
 ---
-src: ./pages/structured-concurrency.md
+src: /pages/structured-concurrency.md
 ---
 
 ---
-src: ./pages/coroutines.md
+src: /pages/coroutines.md
 ---
 
 ---
-src: ./pages/stdexec.md
+src: /pages/stdexec.md
 ---
 
+pnpm

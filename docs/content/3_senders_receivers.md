@@ -448,22 +448,47 @@ A receiver is a callback that supports more than one channel. In fact, it suppor
 Once an async operation has been started exactly one of these functions must be invoked on a receiver before it is destroyed.
 
 ```{note}
-While the receiver interface may look novel, it is in fact very similar to the interface of std::promise, which provides the first two signals as set_value and set_exception, and it’s possible to emulate the third channel with lifetime management of the promise.
+While the receiver interface may look novel, it is in fact very similar to the interface of `std::promise`, which provides the first two signals as `set_value()` and `set_exception()`, and it’s possible to emulate the third channel with lifetime management of the promise.
 ```
 
 Receivers are what is passed as the second argument to `execution::connect`.
+
+### Requirements for receivers
+
+C++26 defines a concept for a receiver. A type `R` models the receiver concept if:
+
+* it is movable and copyable;
+* have an inner type alias named `receiver_concept` that is equal to `receiver_t` (or a derived type)
+* provides information about environment - `std::execution::get_env(R)` must be callable to retrieve the environment associated with the receiver
+
+### Connecting senders to receivers
+
+A sender can be connected to a receiver using the `execution::connect` function. This function takes a sender and a receiver as arguments and returns an operation state. The operation state represents the work that will be performed when the sender is started, and it ensures that one of the completion operations will be called on the receiver when the work is done.
+
+Formally, we can connect a sender `S` to a receiver `R` if the following conditions are met:
+* `R` models the receiver concept
+* `std::execution::connect(S, R)` is well-formed and returns an object that models the `operation_state` concept.
 
 ## Operation states
 
 An operation state is an object that represents work. Unlike senders, it is not a chaining mechanism; instead, it is a concrete object that packages the work described by a full sender chain, ready to be executed. An operation state is neither movable nor copyable, and its interface consists of a single algorithm: `start`, which serves as the submission point of the work represented by a given operation state.
 
-Operation states are not a part of the user-facing API of this proposal; they are necessary for implementing sender consumers like `execution::ensure_started` and `this_thread::sync_wait`, and the knowledge of them is necessary to implement senders, so the only users who will interact with operation states directly are authors of senders and authors of sender algorithms.
-
-The return value of `execution::connect` must satisfy the operation state concept.
+```{note}
+If senders describes an asychronous task, an operation state encapsulates the actual work, including the receiver's role in the entire process. The operation state is the "thing" that gets started, and it is responsible for ensuring that the appropriate completion signal is sent to the receiver when the work finishes.
+```
+There are a few key properties of operation state that are important to understand:
+* Operation state cannot be moved or copied. This is because they often contain internal state that must remain at a stable memory address for the duration of the asynchronous operation. This design choice ensures that the operation state can safely manage resources and maintain its integrity throughout its lifecycle.
+* The object must not be destroyed until the asynchronous operation it represents has completed. This is because the operation state is responsible for ensuring that the appropriate completion signal is sent to the receiver when the work finishes. If the operation state were destroyed prematurely, it could lead to undefined behavior, such as dangling pointers or missed completion signals.
 
 ## execution::connect
 
 `execution::connect` is a customization point which **connects senders with receivers**, resulting in an operation state that will ensure that if start is called that one of the completion operations will be called on the receiver passed to connect.
+
+```{image} ./figures/connect.png
+:alt: connect
+:align: center
+:width: 500px
+```
 
 ```cpp
 execution::sender auto snd = some input sender;

@@ -100,6 +100,12 @@ A sender is said to send some values if a receiver connected (`execution::connec
  Senders are designed to be **highly composable**, allowing developers to build complex, non-linear task graphs using algorithms `like then`, `let_value`, and `when_all`.
  This composition often resembles an "onion" where each sender adaptor wraps around the previous one
 
+```{image} ./figures/Senders-Receivers-1.png
+:alt: senders-receivers
+:align: center
+:width: 600px
+```
+
 #### Generic Basis
 
 Much like iterators act as the glue between containers and algorithms, senders serve as the generic glue between asynchronous task graphs and execution resources like thread pools, GPUs, or I/O loops.
@@ -386,9 +392,9 @@ Certain sender adaptors are not pipeable, because using the pipeline syntax can 
 
 * `execution::on`: This sender adaptor changes how the sender passed to it is executed, not what happens to its result, but allowing it in a pipeline makes it read as if it performed a function more similar to transfer.
 
-### Range of senders - async sequence of data
+<!-- ### Range of senders - async sequence of data
 
-Senders represent a single unit of asynchronous work. In many cases though, what is being modelled is a sequence of data arriving asynchronously, and you want computation to happen on demand, when each element arrives. This requires nothing more than what is in this paper and the range support in C++20. A range of senders would allow you to model such input as keystrokes, mouse movements, sensor readings, or network requests.
+Senders represent a single unit of asynchronous work. In many cases though, what is being modelled is a sequence of data arriving asynchronously, and you want computation to happen on demand, when each element arrives. A range of senders would allow you to model such input as keystrokes, mouse movements, sensor readings, or network requests.
 
 Given some expression `R` that is a range of senders, consider the following in a coroutine that returns an async generator type:
 
@@ -399,7 +405,8 @@ for (auto snd : R) {
   else
     break;
 }
-```
+``` 
+-->
 
 ### All awaitable are senders
 
@@ -408,11 +415,12 @@ All generally awaitable types automatically model the sender concept. The adapta
 For an example, imagine a coroutine type called `Task<T>` that knows nothing about senders. It doesn’t implement any of the sender customization points. Despite that fact, and despite the fact that the `this_thread::sync_wait` algorithm is constrained with the sender concept, the following would compile and do what the user wants:
 
 ```cpp
-Task<int> doSomeAsyncWork();
+Task<int> do_some_async_work();
 
-int main() {
-  // OK, awaitable types satisfy the requirements for senders:
-  auto o = this_thread::sync_wait(doSomeAsyncWork());
+int main() 
+{
+    // OK, awaitable types satisfy the requirements for senders:
+    auto o = this_thread::sync_wait(do_some_async_work());
 }
 ```
 
@@ -424,14 +432,15 @@ If you choose to implement your sender-based algorithms as coroutines, you’ll 
 
 ```cpp
 template<class S>
-  requires single-sender<S&> // see [exec.as.awaitable]
+    requires single-sender<S&> // see [exec.as.awaitable]
 task<single-sender-value-type<S>> retry(S s) {
-  for (;;) {
-    try {
-      co_return co_await s;
-    } catch(...) {
+    for (;;) {
+        try {
+            co_return co_await s;
+        } 
+        catch(...) {
+        }
     }
-  }
 }
 ```
 
@@ -445,25 +454,56 @@ A receiver is a callback that supports more than one channel. In fact, it suppor
 
 * `set_stopped`, which signals that the operation completed without succeeding (`set_value`) and without failing (`set_error`). This result is often used to indicate that the operation stopped early, typically because it was asked to do so because the result is no longer needed.
 
+```{image} ./figures/Receiver.png
+:alt: receiver
+:align: center
+:width: 90%
+```
+
 Once an async operation has been started exactly one of these functions must be invoked on a receiver before it is destroyed.
 
 ```{note}
-While the receiver interface may look novel, it is in fact very similar to the interface of std::promise, which provides the first two signals as set_value and set_exception, and it’s possible to emulate the third channel with lifetime management of the promise.
+While the receiver interface may look novel, it is in fact very similar to the interface of `std::promise`, which provides the first two signals as `set_value()` and `set_exception()`, and it’s possible to emulate the third channel with lifetime management of the promise.
 ```
 
 Receivers are what is passed as the second argument to `execution::connect`.
+
+### Requirements for receivers
+
+C++26 defines a concept for a receiver. A type `R` models the receiver concept if:
+
+* it is movable and copyable;
+* have an inner type alias named `receiver_concept` that is equal to `receiver_t` (or a derived type)
+* provides information about environment - `std::execution::get_env(R)` must be callable to retrieve the environment associated with the receiver
+
+### Connecting senders to receivers
+
+A sender can be connected to a receiver using the `execution::connect` function. This function takes a sender and a receiver as arguments and returns an operation state. The operation state represents the work that will be performed when the sender is started, and it ensures that one of the completion operations will be called on the receiver when the work is done.
+
+Formally, we can connect a sender `S` to a receiver `R` if the following conditions are met:
+* `R` models the receiver concept
+* `std::execution::connect(S, R)` is well-formed and returns an object that models the `operation_state` concept.
 
 ## Operation states
 
 An operation state is an object that represents work. Unlike senders, it is not a chaining mechanism; instead, it is a concrete object that packages the work described by a full sender chain, ready to be executed. An operation state is neither movable nor copyable, and its interface consists of a single algorithm: `start`, which serves as the submission point of the work represented by a given operation state.
 
-Operation states are not a part of the user-facing API of this proposal; they are necessary for implementing sender consumers like `execution::ensure_started` and `this_thread::sync_wait`, and the knowledge of them is necessary to implement senders, so the only users who will interact with operation states directly are authors of senders and authors of sender algorithms.
-
-The return value of `execution::connect` must satisfy the operation state concept.
+```{note}
+If senders describes an asychronous task, an operation state encapsulates the actual work, including the receiver's role in the entire process. The operation state is the "thing" that gets started, and it is responsible for ensuring that the appropriate completion signal is sent to the receiver when the work finishes.
+```
+There are a few key properties of operation state that are important to understand:
+* Operation state cannot be moved or copied. This is because they often contain internal state that must remain at a stable memory address for the duration of the asynchronous operation. This design choice ensures that the operation state can safely manage resources and maintain its integrity throughout its lifecycle.
+* The object must not be destroyed until the asynchronous operation it represents has completed. This is because the operation state is responsible for ensuring that the appropriate completion signal is sent to the receiver when the work finishes. If the operation state were destroyed prematurely, it could lead to undefined behavior, such as dangling pointers or missed completion signals.
 
 ## execution::connect
 
 `execution::connect` is a customization point which **connects senders with receivers**, resulting in an operation state that will ensure that if start is called that one of the completion operations will be called on the receiver passed to connect.
+
+```{image} ./figures/connect.png
+:alt: connect
+:align: center
+:width: 500px
+```
 
 ```cpp
 execution::sender auto snd = some input sender;
@@ -477,4 +517,96 @@ execution::start(state);
 
 // operation states are not movable, and therefore this operation state object must be
 // kept alive until the operation finishes
+```
+
+## Writing sender
+
+Let's try to implement a simplest sender that just sends a single value through the value channel:
+
+```cpp 
+#include <stdexec/execution.hpp>
+
+namespace execution = stdexec;
+
+struct JustIntSender
+{
+    // this is a sender type - required by the sender concept
+    using sender_concept = execution::sender_t;
+
+    // how this sender completes - required by the sender concept
+    using completion_signatures = execution::completion_signatures<execution::set_value_t(int)>;
+
+    // no environment to provide - required by the sender concept
+    execution::env<> get_env() const noexcept { return {}; }
+
+    int value_to_send_;
+
+    JustIntSender(int value)
+        : value_to_send_(value)
+    { }
+
+    template <execution::receiver Receiver>
+    auto connect(Receiver receiver)
+    {
+        return Details::JustIntOpState{.value_to_send_ = value_to_send_, .receiver_ = std::move(receiver)};
+    }
+
+    auto just_int(int value)
+    {
+        return JustIntSender(value);
+    }
+};
+```
+Writing a sender involves defining a type that models the sender concept, which defines a few requirements:
+
+First, we define a inner type `sender_concept` that alliases `execution::sender_t` to indicate that this type models the sender concept. 
+
+Second, we define a inner type `completion_signatures` that specifies the completion signatures of this sender, which in this case is just a single value channel that sends an `int`. Doing this, we indicate that this sender will complete by calling `set_value(int)` on the receiver.
+
+A sender must also provide a `get_env()` function that returns the environment associated with the sender. In this case, we return an empty environment - `execution::env<>{}`.
+
+Finally, we implement the `connect()` function, which takes a receiver and returns an operation state. The operation state is responsible for managing the work that will be performed when the sender is started, and it ensures that one of the completion operations will be called on the receiver when the work is done. In this case, we create a simple operation state that holds the value to send and the receiver, and when started, it will call `set_value(value_to_send_)` on the receiver.
+
+Let's also implement the operation state for this sender:
+
+```cpp
+namespace Details
+{
+    struct Immovable
+    {
+        Immovable() = default;
+        Immovable(const Immovable&) = delete;
+        Immovable& operator=(const Immovable&) = delete;
+    };
+
+    template <execution::receiver Receiver>
+    struct JustIntOpState : Immovable
+    {
+        int value_to_send_;
+        Receiver receiver_;
+
+        // this is an operation state type - required by the operation state concept
+        using operation_state_concept = execution::operation_state_t;
+
+        // the actual work - just send the value to the receiver - required by the operation state concept
+        void start() noexcept
+        {
+            execution::set_value(std::move(receiver_), value_to_send_);
+        }
+    };
+} // namespace Details
+```
+
+The operation state is a simple struct that holds the value to send and the receiver. It models the operation state concept by defining an inner type `operation_state_concept` that alliases `execution::operation_state_t`, and by implementing a `start()` function that performs the actual work of sending the value to the receiver.
+
+The `start()` function is marked `noexcept` because it is not allowed to throw exceptions. If an exception is thrown from `start()`, the behavior is undefined. In this case, since we are just calling `set_value()` on the receiver, which is also not allowed to throw, we can safely mark `start()` as `noexcept`.
+
+The operation state is also made immovable by deleting the copy and move constructors and assignment operators. This is because operation states often contain internal state that must remain at a stable memory address for the duration of the asynchronous operation, and making them immovable ensures that they can safely manage resources and maintain their integrity throughout their lifecycle.
+
+Now we can use our `just_int` to send a value:
+
+```cpp
+auto snd = just_int(42);
+auto result = this_thread::sync_wait(std::move(snd)).value();
+// result == 42
 ```

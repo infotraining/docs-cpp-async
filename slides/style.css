@@ -334,6 +334,14 @@ h1, h2, h3, h4, h5, h6 {
   display: block;
 }
 
+.img-md {
+  width: 700x;
+  max-width: 60%;
+  max-height: 70%;
+  margin: 0 auto; /* center */
+  display: block;
+}
+
 .hint {
   background-color: rgba(201, 208, 214, 0.1);
   padding: 5px !important;

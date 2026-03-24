@@ -56,6 +56,31 @@ background: /img/header-bg.svg
 - They dictate **where** particular work needs to be executed
 
 ---
+class: white-slide
+---
+
+## Senders/Receivers - Scheme
+
+<img src="/img/Senders-Receivers-1.png" class="img-lg" />
+
+---
+class: white-slide
+---
+
+## Receiver
+
+<img src="/img/Receiver.png" class="img-lg" />
+
+---
+class: white-slide
+---
+
+## execution::connect(S, R)
+
+<img src="/img/connect.png" class="img-md" style="padding-top: 3em;" />
+
+
+---
 
 ## Hello World with Senders/Receivers
 

@@ -15,7 +15,7 @@ project:
     jupyter: https://docs.jupyter.org/en/latest
 
   date: 2025-11-02 # ${BUILD_DATE} 
-  github: https://github.com/infotraining/docs-jbook2-template # Change this URL to your GitHub repository
+  github: https://github.com/infotraining/docs-cpp-async
   edit_url: 
   
   plugins:
@@ -26,7 +26,7 @@ project:
   exports:
     - format: typst
       template: lapreprint-typst
-      output: exports/book.pdf
+      output: exports/cpp-async.pdf
       id: output-pdf
 
   # Jupyter Notebook configuration
@@ -63,10 +63,10 @@ site:
 
   actions:
     - title: Feedback
-      url: https://github.com/infotraining/docs-jbook2-template/issues
+      url: https://github.com/infotraining/docs-cpp-async/issues
 
 exports:
   - format: typst
     template: lapreprint-typst
-    output: exports/cpp-book.pdf
+    output: exports/cpp-async.pdf
     id: output-pdf

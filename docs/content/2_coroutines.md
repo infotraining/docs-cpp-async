@@ -632,28 +632,112 @@ This is because this forces you to call `.destroy()` on the coroutine from outsi
 
 ### Customizing the behavior of co_await
 
-The promise type can optionally customize the behavior of every `co_await` expression that appears in the body of the coroutine.
+C++ coroutines provide two major customization points that control how an expression is awaited: `await_transform` and `operator co_await`. Although both influence the behavior of `co_await`, they operate at different levels and serve different purposes. Understanding their relationship is essential for designing coroutine frameworks and awaitable types.
 
-By simply defining a method named `await_transform()` on the promise type, the compiler will then transform every `co_await <expr>` appearing in the body of the coroutine into `co_await promise.await_transform(<expr>)`.
+#### 1. The Awaiting Pipeline
 
-This has a number of important and powerful uses:
-* It lets you enable awaiting types that would not normally be awaitable.
-* It lets you disallow awaiting on certain types by declaring `await_transform` overloads as ` = delete`.
+When the compiler encounters:
 
-  ```cpp
-  template<typename T>
-  class generator_promise
-  {
-    ...
-  
-    // Disable any use of co_await within this type of coroutine.
-    template<typename U>
-    std::suspend_never await_transform(U&&) = delete;
-  
-  };
-  ```
+```cpp
+co_await expr;
+```
 
-* It lets you adapt and change the behavior of normally awaitable values
+it expands this through a fixed sequence of steps:
+
+1. **`promise.await_transform(expr)`**  
+   If defined, this rewrites the awaited expression.
+
+2. `operator co_await` **lookup**
+   Applied to the transformed expression.
+
+3. **Awaiter protocol**  
+   The resulting object must provide:
+   - `await_ready()`
+   - `await_suspend()`
+   - `await_resume()`
+
+This pipeline is strict: **`await_transform` always runs before `operator co_await`**.
+
+#### 2. The Coroutine-Level Hook - `await_transform`
+
+`await_transform` is a method on the coroutine’s **promise type**. It allows the coroutine author to intercept and rewrite every `co_await` inside the coroutine body.
+
+- Affects **all** `co_await` expressions in the coroutine.
+- Can wrap, replace, or forbid awaiting specific expressions.
+- Enables powerful behaviors such as:
+  - scheduling
+  - thread switching
+  - logging
+  - injecting custom awaitable wrappers
+
+#### Example
+
+```cpp
+auto await_transform(auto&& awaitable) {
+    return schedule_on_pool(std::forward<decltype(awaitable)>(awaitable));
+}
+```
+
+This forces every `co_await` to run on a thread pool.
+
+---
+
+#### 3. The Awaitable-Level Hook - `operator co_await`
+
+`operator co_await` is defined on the **awaited type** itself. It allows the type author to specify how that object should behave when awaited.
+
+- Affects only that specific type.
+- Returns an awaiter object.
+- Defines the mechanics of suspension for that type.
+
+#### Example
+
+```cpp
+struct MyAwaitable {
+    auto operator co_await() const {
+        return MyAwaiter{...};
+    }
+};
+```
+
+This gives the type full control over its await behavior.
+
+#### 4. Which One Matters More?
+
+Both are important, but in different ways:
+
+| Aspect | `await_transform` | `operator co_await` |
+|--------|--------------------|----------------------|
+| Defined by | Coroutine author (promise type) | Awaitable type author |
+| Scope | All awaits in the coroutine | Only this type |
+| Power | Can rewrite the entire await expression | Only adapts its own type |
+| Priority | Runs **first** | Runs after `await_transform` |
+| Typical use | Schedulers, executors, async frameworks | Custom awaitables |
+
+Shortly:
+
+- **`await_transform` is more powerful** because it can override everything else.
+- **`operator co_await` is more common** because most awaitable types implement it.
+
+Think of the two hooks like this:
+
+- **`await_transform`** is the coroutine’s *interceptor*.  
+  It can rewrite or wrap the awaited expression before anything else happens.
+
+- **`operator co_await`** is the awaitable’s *adapter*.  
+  It defines how that specific type behaves when awaited.
+
+If both exist, the flow is:
+
+```
+co_await expr
+     ↓
+promise.await_transform(expr)
+     ↓
+operator co_await on the result
+     ↓
+awaiter protocol
+```
 
 ### Customizing the behavior of co_yield
 

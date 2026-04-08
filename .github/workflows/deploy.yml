@@ -72,7 +72,7 @@ jobs:
 
       - name: Build Slidev deck
         working-directory: slides
-        run: pnpm run build --base "/${{github.event.repository.name}}/slides/"
+        run: pnpm run build --base "/slides/"
         # run: pnpm build --base /slides/
 
       - name: Copy slides into site

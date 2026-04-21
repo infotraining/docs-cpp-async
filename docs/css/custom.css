@@ -20,6 +20,16 @@ h6 {
   font-family: "Roboto Condensed", "Fira Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
 }
 
+#title-page h2 {
+  font-family: "Roboto Condensed", "Fira Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  font-size: 3em !important;
+}
+
+.myst-home-link-logo > img {
+  width: 250px !important;
+  height: auto !important;
+}
+
 code,
 pre,
 kbd,
@@ -44,9 +54,13 @@ samp {
 }
 
 .article :where(code):not(:where([class~=not-prose],[class~=not-prose] *)) {
-    color: #E91E63;
+    color: #057b6f;
     font-weight: 500;
     font-size: 0.985em;
+}
+
+.dark .article :where(code):not(:where([class~=not-prose],[class~=not-prose] *)) {
+    color: #07d3c0;
 }
 
 /* .article :where(p):not(:where([class~=not-prose],[class~=not-prose] *)) {
@@ -68,16 +82,17 @@ samp {
 }
 
 pre.myst-code-body {
-  background-color: #f0f0f0 !important;
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+  background-color: #f2f2f280 !important;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.025);
+  border: solid 1px #dddddd;
 }
 
 .shadow-md {
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2) !important;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1) !important;
 }
 
 .shadow {
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2) !important;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1) !important;
 }
 
 .rounded {

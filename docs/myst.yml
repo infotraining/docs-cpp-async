@@ -3,7 +3,7 @@ version: 1
 project:
   id: 7204695b-7485-4989-863c-16cf6e4db155
   title: Asynchronous Programming in C++
-  description: This description goes in the preface of the pdf output. 
+  description: A comprehensive guide to asynchronous programming in C++, covering coroutines, senders/receivers, and more. This book provides practical examples and best practices for writing efficient and scalable asynchronous code in C++.
   # keywords: []
   authors:
     - name: Krystian Piękoś
@@ -18,21 +18,21 @@ project:
   github: https://github.com/infotraining/docs-cpp-async
   edit_url: 
   
-  plugins:
-    - https://github.com/TUD-JB-Templates/JB2_plugins/releases/download/experiment/experiment.mjs
-    - https://github.com/jupyter-book/myst-plugins/releases/download/page-last-updated/page-last-updated.mjs
+  # plugins:
+  #   - https://github.com/TUD-JB-Templates/JB2_plugins/releases/download/experiment/experiment.mjs
+  #   - https://github.com/jupyter-book/myst-plugins/releases/download/page-last-updated/page-last-updated.mjs
   
   # exports and downloads
   exports:
     - format: typst
       template: lapreprint-typst
       output: exports/cpp-async.pdf
-      id: output-pdf
+      id: cpp-async-pdf
 
   # Jupyter Notebook configuration
-  jupyter:
-    binder:
-      repo: https://github.com/executablebooks/thebe-binder-base
+  # jupyter:
+  #   binder:
+  #     repo: https://github.com/executablebooks/thebe-binder-base
 
   toc:
     - file: index.md                      # the landing page
@@ -57,16 +57,11 @@ site:
   options:
     favicon: ./content/figures/favicon.svg            # path to your favicon
     style: ./css/custom.css
-    logo: ./content/figures/logo-infotraining.png     # path to your logo, shown top left at site
+    logo: ./content/figures/logo-infotraining-light.svg     # path to your logo, shown top left at site
+    logo_dark: ./content/figures/logo-infotraining-dark.svg # path to your logo for dark mode, shown top left at site
     folders: false
     hide_authors: true
 
   actions:
     - title: Feedback
       url: https://github.com/infotraining/docs-cpp-async/issues
-
-exports:
-  - format: typst
-    template: lapreprint-typst
-    output: exports/cpp-async.pdf
-    id: output-pdf

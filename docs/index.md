@@ -6,14 +6,14 @@ site:
   hide_title_block: true
 ---
 
-<div style="text-align: center">
+<div id="title-page" style="text-align: center">
 
 # Asynchronous Programming in C++
 
 </div>
 
 ```{figure} content/figures/cpp-logo.svg
-:width: 60%
+:width: 40%
 :align: center
 ```
 

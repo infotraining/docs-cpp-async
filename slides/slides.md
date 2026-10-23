@@ -26,11 +26,6 @@ background: /img/bg-blue-1.jpg
 
 Instructor: Krystian Piękoś Ph.D.
 
-<div class="logo">
-
-![logo](/img/logo.png)
-
-</div>
 
 ---
 layout: default

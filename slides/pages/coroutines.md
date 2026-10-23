@@ -144,7 +144,7 @@ Callback-based code can lead to "callback hell" with deeply nested callbacks, ma
 
 * Coroutines allow us to write asynchronous code in a synchronous style
 ```cpp
-void handle_request(Connection& conn)
+Task<void> handle_request(Connection& conn)
 {
 	std::string request = co_await conn.async_read();             // non-blocking call	
 	auto parsed_request = parse_request(request);                 // CPU-bound work
@@ -366,11 +366,23 @@ struct promise_type
 
 ## Coroutine mechanics in C++20
 
+<v-clicks>
+
 * Coroutine frame
+
 * Return object (coroutine interface)
+
 * Promise type
+
 * Coroutine Handle
-* Suspend ans Resume machanism
+
+* Suspend and Resume mechanism
+  * Awaiters & Awaitables
+  
+
+</v-clicks>
+
+  
 
 ---
 class: white-slide
@@ -385,6 +397,7 @@ class: white-slide
 ## Coroutine Frame
 
 - When a coroutine is invoked (started):
+  
   - a *coroutine frame* is created
 	- it is usually heap allocated (compilers may optimize and allocate the frame on the stack)
   - all call parameters are copied into the frame
@@ -400,6 +413,7 @@ class: white-slide
   - control flow leaves the coroutine
   - or `destroy()` is called on a coroutine handle that refers to a running coroutine
 	- `std::coroutine_handle<T>::destroy()`
+
 - `destroy()` must be called while the coroutine is suspended!!! (otherwise UB)
 
 
@@ -408,6 +422,7 @@ class: white-slide
 ## Return Object - coroutine interface
 
 - The *Return Object* is the type that the coroutine function returns (e.g., `TaskResumer` in the example)
+
 - Defines the API to manage the coroutine from the outside
   - the caller interacts with the coroutine through this interface to resume, check status, retrieve results, etc.
   - usually defines an internal `promise_type` as a customization point
@@ -416,7 +431,10 @@ class: white-slide
 ---
 
 ## Promise type
-    
+
+- Is defined inside the coroutine function's return object
+  - usually as a nested type (inside the return object)
+
 - The coroutine customization point responsible for:
   - returning the Return Object from the start point
   - deciding whether to suspend the coroutine immediately after start
@@ -424,14 +442,98 @@ class: white-slide
   - handling exceptions thrown inside the coroutine
   - handling values returned from the coroutine
 
+
+---
+layout: two-cols-header
+---
+
+## Coroutine - Code Transformation
+
+::left::
+
+```cpp
+ReturnObject coroutine_f(Params)
+{
+    function_body();
+}
+```
+
+::right::
+
+<div class="text-code-07">
+```cpp{all|3-4|6|10|11|13-18|20-21|all}{at:1}
+ReturnObject coroutine_f(Params)
+{
+    using promise_type = 
+		std::coroutine_traits<ReturnObject, Params>::promise_type // [1]
+
+    promise_type promise(promise_constructor_arguments);
+
+    try
+    {
+      co_await promise.initial_suspend(); // [2]
+      function_body();  
+    }
+    catch(...)
+    {
+        if (!initial_await_resume_called) // [3]
+            throw;
+        promise.unhandled_exception();
+    }
+
+final-suspend: // final suspend point
+    co_await promise.final_suspend(); // [4]
+}
+```
+</div>
+
+<style>
+.two-cols-header {
+  column-gap: 20px; /* Adjust the gap size as needed */
+}
+</style>
+
+---
+
+## Promise type - required methods (1)
+* `get_return_object()` - called to create the object that will be returned to the caller of the coroutine. This happens before the coroutine body begins executing.
+
+* `initial_suspend()` - called to determine whether the coroutine should suspend immediately after starting
+  * returns an awaiter that determines whether to suspend immediately after starting.
+
+* `final_suspend() noexcept` - called when the coroutine completes (either normally or via exception).
+  * returns an awaiter that determines whether to suspend one last time or destroy the coroutine state immediately.
+
+---
+
+## Promise type - required methods (2)
+
+* `return_value(v)` / `return_void()` - called when the coroutine executes co_return or falls off the end of its body. 
+  * use `return_void()` if the coroutine does not return a value; 
+  * use `return_value(v)` if it does. 
+  * you must provide exactly one of these, matching how your coroutine returns - 
+  otherwise, the behavior is undefined.
+
+* `unhandled_exception()` - called if an exception escapes the coroutine body. 
+  * typically you either rethrow the exception, store it for later, or terminate the program.
+
+
+
 ---
 
 ## Coroutine handle - `std::coroutine_handle<T>`
 
-- A wrapper object around *a pointer to the coroutine frame* (heap allocated)
+- A thin wrapper object around *a non-owning pointer to the coroutine frame* (heap allocated)
+
 - Two versions of the handle are available:
   - `std::coroutine_handle<>` - no access to the `promise` object (type-erased)
   - `std::coroutine_handle<promise_type>` - provides access to the `promise` object
+
+- `resume()` or `operator()()` can be used to resume the execution of the coroutine.
+
+- `done()` can be used to check if the coroutine has completed execution.
+
+- `destroy()` can be used to manually destroy the coroutine frame.
 
 ---
 
@@ -510,54 +612,52 @@ public:
 ```
 
 ---
-layout: two-cols-header
+
+## Completing Coroutines
+
+* A coroutine completes in one of three ways:
+  1. It executes a `co_return` statement returning `void`.
+  2. It executes `co_return expression` returning a value.
+  3. Execution falls off the end of the coroutine body.
+
 ---
 
-## Coroutine - Code Transformation
+## Final Suspend
 
-::left::
+* When coroutine completes (by any of these means) it executes `promise.final_suspend()`
+  
+* The awaiter returned by `final_suspend()` determines what happens next
 
-```cpp
-ReturnObject coroutine_f(Params)
-{
-    function_body();
-}
-```
+  * If it suspends (like `suspend_always`), the coroutine frame remains valid. The caller can still access the promise object and must eventually call `handle.destroy()` to free the memory.
 
-::right::
+  * If it does not suspend (like `suspend_never`), the coroutine frame is destroyed automatically. Any handles to the coroutine become dangling pointers.
 
-<div class="text-code-07">
-```cpp{all|3-4|6|10|11|13-18|20-21|all}{at:1}
-ReturnObject coroutine_f(Params)
-{
-    using promise_type = 
-		std::coroutine_traits<ReturnObject, Params>::promise_type // [1]
+<!--
+The choice between these behaviors matters. If your caller needs to access the result stored in the promise after the coroutine completes, use suspend_always. If the coroutine’s completion signals some external mechanism (like releasing a semaphore) and the result is not needed, you might use suspend_never to avoid manual cleanup.
+-->
 
-    promise_type promise(promise_constructor_arguments);
+---
 
-    try
-    {
-      co_await promise.initial_suspend(); // [2]
-      function_body();  
-    }
-    catch(...)
-    {
-        if (!initial_await_resume_called) // [3]
-            throw;
-        promise.unhandled_exception();
-    }
+## co_return
 
-final-suspend: // final suspend point
-    co_await promise.final_suspend(); // [4]
-}
-```
-</div>
+- Returning values from a coroutine is only possible via `co_return`
+- In a coroutine:
+  - `co_return;` invokes `promise.return_void()`
+  - `co_return expr;`
+	- if `expr` evaluates to `void` it calls `promise.return_void()`
+	- if `expr` is non-void it calls `promise.return_value(expr)`
+- Exiting a coroutine without an explicit return
+  - calls `promise.return_void()`
+  - if `promise_type` does not have `return_void()` in that case, UB occurs
 
-<style>
-.two-cols-header {
-  column-gap: 20px; /* Adjust the gap size as needed */
-}
-</style>
+---
+
+## co_return
+
+- After calling `co_return` or after a silent exit from the coroutine
+  - all local variables are destroyed (in reverse order of their definition)
+  - `co_await promise.final_suspend()` is invoked
+
 
 ---
 layout: cover
@@ -667,34 +767,14 @@ struct [[nodiscard]] TaskResumer {
 ```
 </div>
 
----
 
-## co_return
-
-- Returning values from a coroutine is only possible via `co_return`
-- In a coroutine:
-  - `co_return;` invokes `promise.return_void()`
-  - `co_return expr;`
-	- if `expr` evaluates to `void` it calls `promise.return_void()`
-	- if `expr` is non-void it calls `promise.return_value(expr)`
-- Exiting a coroutine without an explicit return
-  - calls `promise.return_void()`
-  - if `promise_type` does not have `return_void()` in that case, UB occurs
-
----
-
-## co_return
-
-- After calling `co_return` or after a silent exit from the coroutine
-  - all local variables are destroyed (in reverse order of their definition)
-  - `co_await promise.final_suspend()` is invoked
 
 ---
 layout: cover
-background: /img/bg-blue-2.jpg
+background: /img/bg/bg4.jpg
 ---
 
-## Example 2
+## Example 2 - Coroutine returning a value
 ### ResultTask
 
 ---
@@ -797,6 +877,15 @@ struct promise_type
 };
 ```
 </div>
+
+
+
+---
+layout: cover
+background: /img/bg/bg1.jpg
+---
+
+# Awaiters & Awaitables
 
 ---
 

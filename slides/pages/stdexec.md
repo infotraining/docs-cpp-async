@@ -1,6 +1,6 @@
 ---
 layout: cover
-background: /img/header-bg.svg
+background: /img/bg/bg1.jpg
 ---
 
 # Senders/Receivers (stdexec)

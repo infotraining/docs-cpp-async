@@ -70,4 +70,6 @@ src: /pages/coroutines.md
 src: /pages/stdexec.md
 ---
 
-pnpm
+---
+src: /pages/senders-receivers.md
+---

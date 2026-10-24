@@ -463,3 +463,7 @@ h1, h2, h3, h4, h5, h6 {
   width: 100% !important;
   height: 100% !important;
 }
+
+.slidev-code-wrapper {
+    margin-top: 1em !important;
+}

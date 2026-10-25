@@ -37,7 +37,8 @@ layout: default
     - 9:00 AM - 4:00 PM
     - Lunch: ???
 - Training materials:
-    - https://cpp-26.infotraining.pl
+    - https://cpp-async.infotraining.pl
+    - https://cpp-async.infotraining.pl/slides
     - GIT repository
 - Lunch & Coffee Breaks
 - Evaluation and feedback
